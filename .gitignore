@@ -2,4 +2,4 @@
 /ml_model/test_musics
 /ml_model/data_10.json
 /__pycache__
-song_lists.json
+/song_lists.json

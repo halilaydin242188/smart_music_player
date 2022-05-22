@@ -1,10 +1,8 @@
 
 """
 to do: 
+    implement widgets for player and audio levels
     finding music's album cover not working well, check the try chatch blog
-    complete select_list() method 
-    complete init() method
-    implement buttons for player and audio levels
     add classification method 
     download nice icons from internet , https://icon-icons.com/
 
@@ -19,14 +17,27 @@ import json
 from PIL import Image, ImageTk
 from mutagen.id3 import ID3
 from io import BytesIO
+import cv2 as cv
 
 
 active_list = ""
 active_song = ""
 lists_dict = {}
-folder_path = ""
 playing = False
 paused = False
+
+def get_album_cover(song_path):
+    global song_cover_label, song_cover_image
+
+    try:
+        music = ID3(song_path)
+        pic_bytes = music.getall("APIC")[0].data
+        pic = Image.open(BytesIO(pic_bytes))
+        song_own_cover_image = ImageTk.PhotoImage(pic.resize((250, 250)))
+        song_cover_label.configure(image=song_own_cover_image)
+    except Exception as e:
+        print(e)
+        song_cover_label.configure(image=song_cover_image)
 
 def add_song_to_json(folder_path, song_names):
     if os.path.exists(r"C:\Users\halil\Desktop\smart_music_player\song_lists.json"): # if json file exist, get it
@@ -44,7 +55,6 @@ def add_song_to_json(folder_path, song_names):
         json.dump(lists_dict, write_file)
 
 def get_path_and_songnames():
-    global folder_path
     music_ex = ['mp3','wav','mpeg','m4a','wma','ogg']
     song_names = []
     
@@ -63,12 +73,23 @@ def add_folder():
     global lists_listbox, songs_listbox, active_song, active_list, lists_dict
     folder_path, song_names = get_path_and_songnames()
 
+    if not ( "All Songs" in lists_dict.keys() ):
+        lists_dict["All Songs"] = {}
+
     for song_name in song_names:
         lists_dict["All Songs"][song_name] = folder_path + "/" + song_name
+    
+    for list_name  in lists_dict:
+        lists_listbox.insert(tk.END, list_name)
+        for song_name in lists_dict[list_name].keys():
+            songs_listbox.insert(tk.END, song_name)
+
+    active_list = "All Songs"
 
 def play_pause():
-    global songs_listbox, playing, paused, play_pause_button
+    global songs_listbox, playing, paused, play_pause_button, active_list
     global play_image, pause_image, active_song, status_bar, lists_dict
+
     if playing: 
         paused = True
         playing = False
@@ -82,16 +103,20 @@ def play_pause():
             play_pause_button.configure(image=pause_image)
             pygame.mixer.music.unpause()
         else:
-            song_name = songs_listbox.get(0)
-            song_path = lists_dict[active_list][song_name]
-            pygame.mixer.music.load(song_path)
-            paused = False
-            playing = True
-            active_song = song_name
-            status_bar.configure(text=song_name)
-            play_pause_button.configure(image=pause_image)
-            pygame.mixer.music.play()
-
+            try:
+                song_name = songs_listbox.get(0)
+                song_path = lists_dict[active_list][song_name]
+                paused = False
+                playing = True
+                active_song = song_name
+                status_bar.configure(text=song_name)
+                play_pause_button.configure(image=pause_image)
+                get_album_cover(song_path)
+                pygame.mixer.music.load(song_path)
+                pygame.mixer.music.play()
+            except Exception as e:
+                print(e)
+                
 def play_next():
     global active_song, active_list, lists_dict, active_song_label
     global paused, playing, play_pause_button, song_cover_label, song_cover_image, status_bar
@@ -109,15 +134,7 @@ def play_next():
 
     song_path = lists_dict[active_list][active_song]
     
-    try:
-        music = ID3(song_path)
-        pic_bytes = music.getall("APIC")[0].data
-        pic = Image.open(BytesIO(pic_bytes))
-        song_own_cover_image = ImageTk.PhotoImage(pic.resize((250, 250)))
-        song_cover_label.configure(image=song_own_cover_image)
-    except Exception as e:
-        print(e)
-        song_cover_label.configure(image=song_cover_image)
+    get_album_cover(song_path)
 
     status_bar.configure(text=active_song)
     pygame.mixer.music.load(song_path)
@@ -140,15 +157,7 @@ def play_previous():
 
     song_path = lists_dict[active_list][active_song]
 
-    try:
-        music = ID3(song_path)
-        pic_bytes = music.getall("APIC")[0].data
-        pic = Image.open(BytesIO(pic_bytes))
-        song_own_cover_image = ImageTk.PhotoImage(Image.open(BytesIO(pic_bytes)).resize((250, 250)))
-        song_cover_label.configure(image=song_own_cover_image)
-    except Exception as e:
-        print(e)
-        song_cover_label.configure(image=song_cover_image)
+    get_album_cover(song_path)
 
     status_bar.configure(text=active_song)
     pygame.mixer.music.load(song_path)
@@ -156,32 +165,37 @@ def play_previous():
 
 def select_song(event):
     global songs_listbox, status_bar, song_cover_label, song_cover_image
-    global pause_image, paused, playing
+    global pause_image, paused, playing, active_song
 
     selected_index = songs_listbox.curselection()
     selected_song = songs_listbox.get(selected_index)
 
+    active_song = selected_song
     paused = False
     playing = True
     play_pause_button.configure(image=pause_image)
 
     song_path = lists_dict[active_list][selected_song]
-    try:
-        music = ID3(song_path)
-        pic_bytes = music.getall("APIC")[0].data
-        pic = Image.open(BytesIO(pic_bytes))
-        song_own_cover_image = ImageTk.PhotoImage(Image.open(BytesIO(pic_bytes)).resize((250, 250)))
-        song_cover_label.configure(image=song_own_cover_image)
-    except Exception as e:
-        print(e)
-        song_cover_label.configure(image=song_cover_image)
+    get_album_cover(song_path)
     
     status_bar.configure(text=selected_song)
     pygame.mixer.music.load(song_path)
     pygame.mixer.music.play()
 
 def select_list(event): # wasn't completed
-    print("a list selected")
+    global lists_listbox, songs_listbox, active_list, lists_dict
+
+    selected_index = lists_listbox.curselection()
+    selected_list = lists_listbox.get(selected_index)
+    active_list = selected_list
+
+    song_names = []
+    for song_name in lists_dict[active_list].keys():
+        song_names.append(song_name)
+    song_names.sort(reverse=True)
+    songs_listbox.delete(0, tk.END)
+    for song_name in song_names:
+        songs_listbox.insert(0, song_name)
 
 def init(): # wasn't completed
     global lists_dict, lists_listbox, songs_listbox, active_list
@@ -189,14 +203,14 @@ def init(): # wasn't completed
         os.chdir(r"C:\Users\halil\Desktop\smart_music_player")
         with open("song_lists.json", "r") as read_file:
             lists_dict = json.load(read_file)
+    
+        for list_name  in lists_dict:
+            lists_listbox.insert(tk.END, list_name)
+            for song_name in lists_dict[list_name].keys():
+                songs_listbox.insert(tk.END, song_name)
 
-    for list_name  in lists_dict:
-        lists_listbox.insert(tk.END, list_name)
-        for song_name in lists_dict[list_name].keys():
-            songs_listbox.insert(tk.END, song_name)
-
-    active_list = "All Songs"
-    play_pause()
+        active_list = "All Songs"
+        play_pause()
 
 # main app object
 root = tk.Tk()
