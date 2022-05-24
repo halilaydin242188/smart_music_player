@@ -3,3 +3,4 @@
 /ml_model/data_10.json
 /__pycache__
 /song_lists.json
+ml_model/__pycache__

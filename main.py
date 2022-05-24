@@ -1,9 +1,10 @@
 
 """
 to do: 
+    classification is so slow, fix it
+    classification accuracy is not good enough, try to make a better model
     implement widgets for player and audio levels
     finding music's album cover not working well, check the try chatch blog
-    add classification method 
     download nice icons from internet , https://icon-icons.com/
 
 """
@@ -17,7 +18,8 @@ import json
 from PIL import Image, ImageTk
 from mutagen.id3 import ID3
 from io import BytesIO
-import cv2 as cv
+
+import song_classification as sc
 
 
 active_list = ""
@@ -26,6 +28,40 @@ lists_dict = {}
 playing = False
 paused = False
 
+def classify_songs():
+    global lists_dict, lists_listbox
+    classified_songs = []
+
+    # get the classified songs so you can pass them
+    for list_name in lists_dict:
+        if list_name == "All Songs":
+            continue
+        else:
+            for song_name in lists_dict[list_name]:
+                classified_songs.append(song_name)
+    
+    # loop the lists_dict, classify songs and update the lists_dic
+    for song_name in lists_dict["All Songs"]:
+        if song_name not in classified_songs:
+            song_path = lists_dict["All Songs"][song_name]
+            song_genre = sc.get_song_genre(song_path)
+
+            if song_genre not in lists_dict.keys():
+                lists_dict[song_genre] = {}
+
+            lists_dict[song_genre][song_name] = song_path
+            print("--- {} IS CLASSIFIED ---".format(song_name))
+
+    # update lists_listbox widget
+    lists_listbox.delete(0, tk.END)
+    for list_name in lists_dict:
+        lists_listbox.insert(tk.END, list_name)
+
+    # update the song_lists.json file with new lists_dict
+    os.chdir(r"C:\Users\halil\Desktop\smart_music_player")
+    with open("song_lists.json", "w") as write_file:
+        json.dump(lists_dict, write_file)
+        
 def get_album_cover(song_path):
     global song_cover_label, song_cover_image
 
@@ -267,6 +303,7 @@ menu.add_cascade(label="Tools", menu=tools)
 menu.add_cascade(label="About", menu=about)
 
 tools.add_command(label="Add Folder", command=add_folder)
+tools.add_command(label="Classify The Songs", command=classify_songs)
 
 songs_listbox.bind("<Double-1>", select_song)
 lists_listbox.bind("<Double-1>", select_list)
