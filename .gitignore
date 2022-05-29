@@ -1,6 +1,6 @@
-/ml_model/datasets
-/ml_model/test_musics
-/ml_model/data_10.json
+/ml_model_creating/datasets
+/ml_model_creating/test_musics
+/ml_model_creating/data_10.json
+ml_model_creating/__pycache__
 /__pycache__
 /song_lists.json
-ml_model/__pycache__

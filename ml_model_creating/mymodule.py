@@ -124,3 +124,5 @@ def getMfcc(filepath, num_mfcc=13, n_fft=2048, hop_length=512, num_segments=10):
 
 
     return data["mfcc"]
+
+    
