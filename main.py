@@ -10,6 +10,8 @@ to do:
 
 """
 
+import math
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.filedialog as fd
@@ -19,8 +21,10 @@ import os
 import pygame
 import json
 from PIL import Image, ImageTk
+from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
 from io import BytesIO
+import threading
 
 import song_classification as sc
 
@@ -31,6 +35,11 @@ active_song = ""
 lists_dict = {}
 playing = False
 paused = False
+song_time_in_seconds = 0
+is_song_time_thread_active = False
+
+def start_classification_thread():
+    threading.Thread(target=classify_all_songs).start()
 
 def show_about():
     mb.showinfo('About',""" 
@@ -60,6 +69,7 @@ def classify_all_songs():
             song_genre = sc.get_song_genre(song_path)
 
             print("CLASSIFIED : {} , GENRE : {}".format(song_name, song_genre))
+            label_statusbar.configure(text="CLASSIFIED : {} , GENRE : {}".format(song_name, song_genre))
 
             if song_genre not in lists_dict.keys():
                 lists_dict[song_genre] = {}
@@ -76,7 +86,7 @@ def classify_all_songs():
     with open("song_lists.json", "w") as write_file:
         json.dump(lists_dict, write_file, indent=1)
 
-    label_statusbar.configure(text="Classification is finished. You can continue listening to music")
+    label_statusbar.configure(text="Classification is finished.")
         
 def get_album_cover(song_path):
     global label_song_cover, image_song_cover
@@ -143,8 +153,8 @@ def add_folder():
     active_list = "All Songs"
 
 def play_pause():
-    global listbox_songs, playing, paused, button_play_pause, active_list
-    global image_play, image_pause, active_song, label_statusbar, lists_dict
+    global listbox_songs, playing, paused, button_play_pause, active_list, scale_music_scroll, is_song_time_thread_active
+    global image_play, image_pause, active_song, label_statusbar, lists_dict, song_time_in_seconds
 
     if playing: 
         paused = True
@@ -158,38 +168,46 @@ def play_pause():
             paused = False
             playing = True
             button_play_pause.configure(image=image_pause)
+            threading.Thread(target=song_time).start()
             label_statusbar.configure(text="PLAYING : {}".format(active_song))
             pygame.mixer.music.unpause()
+            threading.Thread(target=song_time).start()
         else:
-            try:
-                song_name = listbox_songs.get(0)
-                song_path = lists_dict[active_list][song_name]
-                paused = False
-                playing = True
-                active_song = song_name
-                label_statusbar.configure(text="PLAYING : {}".format(active_song))
-                button_play_pause.configure(image=image_pause)
-                get_album_cover(song_path)
-                pygame.mixer.music.load(song_path)
-                pygame.mixer.music.play()
-            except Exception as e:
-                print(e)
+            song_name = listbox_songs.get(0)
+            song_path = lists_dict[active_list][song_name]
+            paused = False
+            playing = True
+            active_song = song_name
+            label_statusbar.configure(text="PLAYING : {}".format(active_song))
+            button_play_pause.configure(image=image_pause)
+            get_album_cover(song_path)
+
+            pygame.mixer.music.load(song_path)
+            pygame.mixer.music.play()
+
+            set_audio_length_label()
+
+            if is_song_time_thread_active:
+                pass
+            else:
+                is_song_time_thread_active = True
+                threading.Thread(target=song_time).start()
                 
 def play_next():
-    global active_song, active_list, lists_dict, active_song_label
+    global active_song, active_list, lists_dict, scale_music_scroll, song_time_in_seconds, is_song_time_thread_active
     global paused, playing, button_play_pause, label_song_cover, image_song_cover, label_statusbar
 
     songs = listbox_songs.get(0, tk.END)
     curr_song_index = songs.index(active_song)
-    paused = False
-    playing = True
-    button_play_pause.configure(image=image_pause)
 
     if curr_song_index == len(songs) - 1:
         active_song = songs[0]
     else:
         active_song = songs[curr_song_index+1]
 
+    paused = False
+    playing = True
+    button_play_pause.configure(image=image_pause)
     song_path = lists_dict[active_list][active_song]
     
     get_album_cover(song_path)
@@ -198,9 +216,19 @@ def play_next():
     pygame.mixer.music.load(song_path)
     pygame.mixer.music.play()
 
+    set_audio_length_label()
+
+    scale_music_scroll.configure(value=0)
+    song_time_in_seconds = 0
+    if is_song_time_thread_active:
+        pass
+    else:
+        is_song_time_thread_active = True
+        threading.Thread(target=song_time).start()
+
 def play_previous():
-    global active_song, active_list, active_song, lists_dict, active_song_label
-    global paused, playing, button_play_pause, label_song_cover, image_song_cover, label_statusbar
+    global active_song, active_list, active_song, lists_dict, scale_music_scroll, song_time_in_seconds
+    global paused, playing, button_play_pause, label_song_cover, image_song_cover, label_statusbar, is_song_time_thread_active
 
     songs = listbox_songs.get(0, tk.END)
     curr_song_index = songs.index(active_song)
@@ -221,9 +249,19 @@ def play_previous():
     pygame.mixer.music.load(song_path)
     pygame.mixer.music.play()
 
+    set_audio_length_label()
+
+    scale_music_scroll.configure(value=0)
+    song_time_in_seconds = 0
+    if is_song_time_thread_active:
+        pass
+    else:
+        is_song_time_thread_active = True
+        threading.Thread(target=song_time).start()
+
 def select_song(event):
-    global listbox_songs, label_statusbar, label_song_cover, image_song_cover
-    global image_pause, paused, playing, active_song
+    global listbox_songs, label_statusbar, label_song_cover, image_song_cover, is_song_time_thread_active
+    global image_pause, paused, playing, active_song, scale_music_scroll, song_time_in_seconds
 
     selected_index = listbox_songs.curselection()
     selected_song = listbox_songs.get(selected_index)
@@ -240,7 +278,17 @@ def select_song(event):
     pygame.mixer.music.load(song_path)
     pygame.mixer.music.play()
 
-def select_list(event): # wasn't completed
+    set_audio_length_label()
+
+    scale_music_scroll.configure(value=0)
+    song_time_in_seconds = 0
+    if is_song_time_thread_active:
+        pass
+    else:
+        is_song_time_thread_active = True
+        threading.Thread(target=song_time).start()
+
+def select_list(event):
     global listbox_lists, listbox_songs, active_list, lists_dict
 
     selected_index = listbox_lists.curselection()
@@ -255,7 +303,7 @@ def select_list(event): # wasn't completed
     for song_name in song_names:
         listbox_songs.insert(0, song_name)
 
-def init(): # wasn't completed
+def init():
     global lists_dict, listbox_lists, listbox_songs, active_list
     if os.path.exists(r"C:\Users\halil\Desktop\smart_music_player\song_lists.json"):
         os.chdir(r"C:\Users\halil\Desktop\smart_music_player")
@@ -270,11 +318,65 @@ def init(): # wasn't completed
         active_list = "All Songs"
         play_pause()
 
+def scale(value):
+    audio_length = MP3(lists_dict["All Songs"][active_song]).info.length
+    set_value = (audio_length * float(value)) / 100.0
+
+    set_time(set_value)
+
+    pygame.mixer.music.rewind()
+    pygame.mixer.music.set_pos(set_value)
+
+def set_time(time_in_seconds):
+    global label_time, song_time_in_seconds
+    song_time_in_seconds = time_in_seconds
+
+    minutes = math.floor(song_time_in_seconds / 60)
+    seconds = int(song_time_in_seconds % 60 )
+    if minutes < 10:
+        if seconds < 10:
+            label_time.configure(text=f"0{minutes}:0{seconds}")
+        else:
+            label_time.configure(text=f"0{minutes}:{seconds}")
+
+    else:
+        if seconds < 10:
+            label_time.configure(text=f"{minutes}:0{seconds}")
+        else:
+            label_time.configure(text=f"{minutes}:{seconds}")
+
+def song_time():
+    global song_time_in_seconds
+    while pygame.mixer.music.get_busy():
+        song_time_in_seconds += 0.99
+        set_time(song_time_in_seconds)
+        time.sleep(0.99)
+
+def set_audio_length_label():
+    global label_audio_length
+
+    audio_length = MP3(lists_dict["All Songs"][active_song]).info.length
+    audio_minutes_length = math.floor(audio_length / 60)
+    audio_seconds_length = int(audio_length % 60 )
+
+    if audio_minutes_length < 10:
+        if audio_seconds_length < 10:
+            label_audio_length.configure(text=f"0{audio_minutes_length}:0{audio_seconds_length}")
+        else:
+            label_audio_length.configure(text=f"0{audio_minutes_length}:{audio_seconds_length}")
+
+    else:
+        if audio_seconds_length < 10:
+            label_audio_length.configure(text=f"{audio_minutes_length}:0{audio_seconds_length}")
+        else:
+            label_audio_length.configure(text=f"{audio_minutes_length}:{audio_seconds_length}")
+
+
 # main app object
 #root = tk.Tk()
-#root = ThemedTk(theme="breeze")
 #root = ThemedTk(theme="winxpblue")
-root = ThemedTk(theme="adapta")
+#root = ThemedTk(theme="adapta")
+root = ThemedTk(theme="breeze")
 
 # app configurations
 root.geometry("900x540+300+150")
@@ -287,40 +389,47 @@ image_play = ImageTk.PhotoImage(Image.open("./icons/play.png").resize((50, 50)))
 image_pause = ImageTk.PhotoImage(Image.open("./icons/pause.png").resize((50, 50)))
 image_previous = ImageTk.PhotoImage(Image.open("./icons/previous.png").resize((50, 50)))
 image_next = ImageTk.PhotoImage(Image.open("./icons/next.png").resize((50, 50)))
-image_song_cover = ImageTk.PhotoImage(Image.open("./icons/cover_art.png").resize((350, 350)))
+image_song_cover = ImageTk.PhotoImage(Image.open("./icons/song_cover.png").resize((330, 330)))
 
 # create widgets
 menu = tk.Menu(root, tearoff=0)
 tools = tk.Menu(menu, tearoff=0)
 about = tk.Menu(menu, tearoff=0)
 
-listbox_lists = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#fcdf8d")
-listbox_songs = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#fcdf8d")
+listbox_lists = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff")
+listbox_songs = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff")
 
-label_lists = ttk.Label(root, text="LISTS", anchor=tk.CENTER, background="#9ab4fc")
-label_songs = ttk.Label(root, text="SONGS", anchor=tk.CENTER, background="#9ab4fc")
+label_lists = ttk.Label(root, text="LISTS", anchor=tk.CENTER, background="#ffa294")
+label_songs = ttk.Label(root, text="SONGS", anchor=tk.CENTER, background="#ffa294")
 label_statusbar = ttk.Label(root, text="Please click the 'Add Folder' from 'Tools' button to add songs...", anchor=tk.W, relief="sunken", background="#e2f29b")
-label_song_cover = ttk.Label(root, image=image_song_cover, background="#9ab4fc")
+label_song_cover = ttk.Label(root, image=image_song_cover)
+label_time = ttk.Label(root, text="00:00")
+label_audio_length = ttk.Label(root, text="00:00")
 
 # button_add_folder = ttk.Button(root, text="Add Folder", command=add_folder)
 button_play_pause = ttk.Button(root, image=image_play, command=play_pause)
 button_next = ttk.Button(root, image=image_next, command=play_next)
 button_previous = ttk.Button(root, image=image_previous, command=play_previous)
 
+scale_music_scroll = ttk.Scale(root, command=scale, orient=tk.HORIZONTAL, from_=0.0, to=99.0)
+
 
 # layouting
-listbox_lists.place(x=0, y=30, width=200, height=390)
-listbox_songs.place(x=550, y=30, width=350, height=390)
+listbox_lists.place(x=0, y=40, width=200, height=340)
+listbox_songs.place(x=550, y=40, width=350, height=340)
 
-label_lists.place(x=0, y=0, width=200, height=30)
-label_songs.place(x=550, y=0, width=350, height=30)
+label_lists.place(x=0, y=5, width=200, height=30)
+label_songs.place(x=550, y=5, width=350, height=30)
 label_statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 
-# button_add_folder.place(x=0, y=30, width=200, height=30)
 button_previous.place(x=220, y=430)
 button_play_pause.place(x=350, y=430)
 button_next.place(x=480, y=430)
-label_song_cover.place(x=200, y=50, width=350, height=350)
+label_song_cover.place(x=210, y=50, width=330, height=330)
+label_time.place(x=110, y=400, width=40, height=20)
+label_audio_length.place(x=600, y=400, width=40, height=20)
+
+scale_music_scroll.place(x=150, y=400, width=450, height=20)
 
 #widget configurations
 root.configure(menu=menu)
@@ -328,7 +437,7 @@ menu.add_cascade(label="Tools", menu=tools)
 menu.add_cascade(label="About", menu=about)
 
 tools.add_command(label="Add Folder", command=add_folder)
-tools.add_command(label="Classify The Songs", command=classify_all_songs)
+tools.add_command(label="Classify The Songs", command=start_classification_thread)
 about.add_command(label="About The App", command=show_about)
 
 listbox_songs.bind("<Double-1>", select_song)
