@@ -13,7 +13,7 @@ def predict(filepath):
         song = AudioSegment.export(filepath, format="mp3")
     """
     
-    model = keras.models.load_model("./ml_model/model_classification")
+    model = keras.models.load_model("./model")
 
     test_data = np.array(mymodule.getMfcc(filepath)) # test_data = (10, 130, 13) , should be (130, 13)
     test_data = test_data[..., np.newaxis] # test_data.shape = (10, 130, 13, 1)
@@ -26,5 +26,5 @@ def predict(filepath):
 
     print("RESULT : ", mode(predicted_index))
 
-filepath = "C:/Users/halil/Desktop/m\u00fcziklerim/Alan Walker - Fade.mp3"
+filepath = r"C:\Users\halil\Desktop\smart_music_player\ml_model_creating\datasets\GTZAN Dataset - Music Genre Classification\genres_original\rock\rock.00007.wav"
 predict(filepath)

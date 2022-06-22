@@ -3,8 +3,6 @@
 to do: 
     classification accuracy is not good enough, try to make a better model
         // # test_data = (10, 130, 13) , should be (1, 130, 13)
-    while classifying add a window to show which song is classifying and the result
-    implement widgets for player and audio levels
     finding music's album cover not working well, check the try chatch blog
     download nice icons from internet , https://icon-icons.com/
 
@@ -87,10 +85,11 @@ def classify_all_songs():
         json.dump(lists_dict, write_file, indent=1)
 
     label_statusbar.configure(text="Classification is finished.")
+    print("Classification is finished")
         
 def get_album_cover(song_path):
     global label_song_cover, image_song_cover
-
+    """
     try:
         music = ID3(song_path)
         pic_bytes = music.getall("APIC")[0].data
@@ -100,6 +99,8 @@ def get_album_cover(song_path):
     except Exception as e:
         print(e)
         label_song_cover.configure(image=image_song_cover)
+    """
+    label_song_cover.configure(image=image_song_cover)
 
 def save_lists_as_json(folder_path, song_names):
     if os.path.exists(r"C:\Users\halil\Desktop\smart_music_player\song_lists.json"): # if json file exist, get it
@@ -148,7 +149,7 @@ def add_folder():
             listbox_songs.insert(tk.END, song_name)
 
     save_lists_as_json(folder_path, song_names)
-    label_statusbar.configure(text="Click \'Play\' button to play")
+    label_statusbar.configure(text="New Songs Were Added")
 
     active_list = "All Songs"
 
@@ -312,8 +313,9 @@ def init():
     
         for list_name  in lists_dict:
             listbox_lists.insert(tk.END, list_name)
-            for song_name in lists_dict[list_name].keys():
-                listbox_songs.insert(tk.END, song_name)
+            if list_name == "All Songs":
+                for song_name in lists_dict[list_name].keys():
+                    listbox_songs.insert(tk.END, song_name)
 
         active_list = "All Songs"
         play_pause()
@@ -328,8 +330,12 @@ def scale(value):
     pygame.mixer.music.set_pos(set_value)
 
 def set_time(time_in_seconds):
-    global label_time, song_time_in_seconds
+    global label_time, song_time_in_seconds, scale_music_scroll
     song_time_in_seconds = time_in_seconds
+
+    audio_length = MP3(lists_dict["All Songs"][active_song]).info.length
+    scale_value = song_time_in_seconds * 100 / audio_length
+    scale_music_scroll.configure(value=scale_value)
 
     minutes = math.floor(song_time_in_seconds / 60)
     seconds = int(song_time_in_seconds % 60 )
@@ -389,19 +395,19 @@ image_play = ImageTk.PhotoImage(Image.open("./icons/play.png").resize((50, 50)))
 image_pause = ImageTk.PhotoImage(Image.open("./icons/pause.png").resize((50, 50)))
 image_previous = ImageTk.PhotoImage(Image.open("./icons/previous.png").resize((50, 50)))
 image_next = ImageTk.PhotoImage(Image.open("./icons/next.png").resize((50, 50)))
-image_song_cover = ImageTk.PhotoImage(Image.open("./icons/song_cover.png").resize((330, 330)))
+image_song_cover = ImageTk.PhotoImage(Image.open("./icons/song_cover.png").resize((340, 340)))
 
 # create widgets
 menu = tk.Menu(root, tearoff=0)
 tools = tk.Menu(menu, tearoff=0)
 about = tk.Menu(menu, tearoff=0)
 
-listbox_lists = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff")
-listbox_songs = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff")
+listbox_lists = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff", font="Courier 10 bold")
+listbox_songs = tk.Listbox(root, selectmode=tk.SINGLE, borderwidth=0, highlightthickness=0, background="#9cefff", font="Courier 10")
 
-label_lists = ttk.Label(root, text="LISTS", anchor=tk.CENTER, background="#ffa294")
-label_songs = ttk.Label(root, text="SONGS", anchor=tk.CENTER, background="#ffa294")
-label_statusbar = ttk.Label(root, text="Please click the 'Add Folder' from 'Tools' button to add songs...", anchor=tk.W, relief="sunken", background="#e2f29b")
+label_lists = ttk.Label(root, text="LISTS", anchor=tk.CENTER, background="#ffa294", font="Times 15 roman bold")
+label_songs = ttk.Label(root, text="SONGS", anchor=tk.CENTER, background="#ffa294", font="Times 15 roman bold")
+label_statusbar = ttk.Label(root, text="Please click the 'Add Folder' from 'Tools' button to add songs...", anchor=tk.W, relief="sunken", background="#e2f29b", font="Times 11 italic bold")
 label_song_cover = ttk.Label(root, image=image_song_cover)
 label_time = ttk.Label(root, text="00:00")
 label_audio_length = ttk.Label(root, text="00:00")
@@ -425,7 +431,7 @@ label_statusbar.pack(side=tk.BOTTOM, fill=tk.X)
 button_previous.place(x=220, y=430)
 button_play_pause.place(x=350, y=430)
 button_next.place(x=480, y=430)
-label_song_cover.place(x=210, y=50, width=330, height=330)
+label_song_cover.place(x=200, y=30, width=340, height=340)
 label_time.place(x=110, y=400, width=40, height=20)
 label_audio_length.place(x=600, y=400, width=40, height=20)
 

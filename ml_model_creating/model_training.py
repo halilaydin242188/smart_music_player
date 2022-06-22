@@ -21,19 +21,20 @@ def load_data(data_path):
 def plot_history(history):
     fig, axs = plt.subplots(2)
 
-    axs[0].plot(history.history["accuracy"], label="train accuracy")
-    axs[0].plot(history.history["val_accuracy"], label="test accuracy")
+    axs[0].plot(history.history["accuracy"], label="eğitim tutarlılığı")
+    axs[0].plot(history.history["val_accuracy"], label="test tutarlılığı")
     axs[0].set_ylabel("Doğruluk")
     axs[0].legend(loc="lower right")
     axs[0].set_title("Doğruluk değerlendirmesi")
 
-    axs[1].plot(history.history["loss"], label="train error")
-    axs[1].plot(history.history["val_loss"], label="test error")
+    axs[1].plot(history.history["loss"], label="eğitim değerlendirmesi")
+    axs[1].plot(history.history["val_loss"], label="kayıp değerlendirmesi")
     axs[1].set_ylabel("Kayıp")
     axs[1].set_xlabel("devir")
     axs[1].legend(loc="upper right")
     axs[1].set_title("Kayıp değerlendirmesi")
 
+    fig.tight_layout()
     plt.show()
 
 
