@@ -1,13 +1,4 @@
 
-"""
-to do: 
-    classification accuracy is not good enough, try to make a better model
-        // # test_data = (10, 130, 13) , should be (1, 130, 13)
-    finding music's album cover not working well, check the try chatch blog
-    download nice icons from internet , https://icon-icons.com/
-
-"""
-
 import math
 import time
 import tkinter as tk

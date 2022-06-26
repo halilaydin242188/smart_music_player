@@ -57,8 +57,8 @@ def get_song_genre(filepath):
     if model == None:
         model = keras.models.load_model("./ml_model_creating/model")
 
-    test_data = np.array(getMfcc(filepath)) # test_data = (10, 130, 13) , should be (130, 13)
-    test_data = test_data[..., np.newaxis] # test_data.shape = (10, 130, 13, 1)
+    test_data = np.array(getMfcc(filepath))
+    test_data = test_data[..., np.newaxis]
     prediction = model.predict(test_data)
     predicted_index = np.argmax(prediction, axis=1)
     predicted_genre_index = mode(predicted_index)

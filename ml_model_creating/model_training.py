@@ -56,22 +56,22 @@ def build_model(input_shape):
 
     model = keras.Sequential()
 
-    # 1st conv layer
+    # 1. layer
     model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
     model.add(keras.layers.MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
     model.add(keras.layers.BatchNormalization())
 
-    # 2nd conv layer
+    # 2. layer
     model.add(keras.layers.Conv2D(32, (3, 3), activation='relu'))
     model.add(keras.layers.MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
     model.add(keras.layers.BatchNormalization())
 
-    # 3rd conv layer
+    # 3. layer
     model.add(keras.layers.Conv2D(32, (2, 2), activation='relu'))
     model.add(keras.layers.MaxPooling2D((2, 2), strides=(2, 2), padding='same'))
     model.add(keras.layers.BatchNormalization())
 
-    # flatten output and feed it into dense layer
+    # 4. layer, flatten and feed into dense layer 
     model.add(keras.layers.Flatten())
     model.add(keras.layers.Dense(64, activation='relu'))
     model.add(keras.layers.Dropout(0.3))
@@ -98,7 +98,6 @@ if __name__ == "__main__":
     input_shape = (X_train.shape[1], X_train.shape[2], 1)
     model = build_model(input_shape)
 
-    # compile model
     optimiser = tf.keras.optimizers.Adam(learning_rate=0.0001)
     model.compile(optimizer=optimiser,
                   loss='sparse_categorical_crossentropy',

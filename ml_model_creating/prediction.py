@@ -15,7 +15,7 @@ def predict(filepath):
     
     model = keras.models.load_model("./model")
 
-    test_data = np.array(mymodule.getMfcc(filepath)) # test_data = (10, 130, 13) , should be (130, 13)
+    test_data = np.array(mymodule.getMfcc(filepath))
     test_data = test_data[..., np.newaxis] # test_data.shape = (10, 130, 13, 1)
 
     prediction = model.predict(test_data)
